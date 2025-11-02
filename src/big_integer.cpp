@@ -1,4 +1,5 @@
 #include <rsa/big_integer.h>
+
 #include <cstring>
 #include <cassert>
 #include <iostream>
@@ -25,6 +26,7 @@ char2hex(char ch)
         return ch - 'A' + 10;
     if ('a' <= ch && ch <= 'f')
         return ch - 'a' + 10;
+    assert(ch == ' ' || ch == '_');
     return -1;
 }
 
@@ -48,7 +50,8 @@ BigInt::BigInt(const char *str, int len)
     if (str[0] == '-')
     {
         sign = true;
-        str++;
+        ++str;
+        --len;
     }
     if (str[0] != '0' || str[1] != 'x')
         std::__throw_invalid_argument("fromString only support hex");
@@ -112,7 +115,12 @@ bool BigInt::operator==(const BigInt &other) const
     for (int i = 0; i < n1; ++i)
         if (digits[i] != other.digits[i])
             return false;
-    return false;
+    return true;
+}
+
+bool BigInt::operator!=(const BigInt &other) const
+{
+    return !(*this == other);
 }
 
 static int
@@ -151,25 +159,25 @@ eval_add_or_sub(const std::vector<BIT> &a1, const std::vector<BIT> &a2, bool is_
             pre += a2[i];
             if (pre > a1[i])
             {
-                res[i] = -pre + BIT_MAX + a1[i];
+                res[i] = static_cast<BIT>(-pre + BIT_MAX + a1[i]);
                 pre = 1;
             }
             else
             {
-                res[i] = a1[i] - pre;
+                res[i] = static_cast<BIT>(-pre + a1[i]);
                 pre = 0;
             }
         }
-        for (int i = n1; i < n2; ++i)
+        for (int i = n2; i < n1; ++i)
         {
             if (pre > a1[i])
             {
-                res[i] = -pre + BIT_MAX + a1[i];
-                pre = -1;
+                res[i] = static_cast<BIT>(-pre + BIT_MAX + a1[i]);
+                pre = 1;
             }
             else
             {
-                res[i] = a1[i] - pre;
+                res[i] = static_cast<BIT>(-pre + a1[i]);
                 pre = 0;
             }
         }
@@ -188,7 +196,7 @@ eval_add_or_sub(const std::vector<BIT> &a1, const std::vector<BIT> &a2, bool is_
 
         for (int i = n2; i < n1; ++i)
         {
-            pre = pre + a1[i] + a2[i];
+            pre = pre + a1[i];
             res[i] = static_cast<BIT>(pre);
             pre >>= BITL;
         }
@@ -237,21 +245,26 @@ BigInt::operator*(const BigInt &other) const
     int n2 = other.digits.size();
     int n = n1 + n2 - 1;
 
-    std::vector<BITT> tmp(n, 0);
+    std::vector<BITT> tmp(n + 1, 0);
     for (int i = 0; i < n1; ++i)
         for (int j = 0; j < n2; ++j)
-            tmp[i + j] += static_cast<BITT>(1) * digits[i] * other.digits[j];
+        {
+            auto now = static_cast<BITT>(1) * digits[i] * other.digits[j];
+            tmp[i + j + 1] += (now >> BITL);
+            tmp[i + j] += static_cast<BIT>(now);
+        }
 
     BITT pre = 0;
-    std::vector<BIT> res(n, 0);
-    for (int i = 0; i < n; ++i)
+    std::vector<BIT> res(n + 1, 0);
+    for (int i = 0; i <= n; ++i)
     {
         pre += tmp[i];
         res[i] = static_cast<BIT>(pre);
         pre >>= BITL;
     }
-    if (pre)
-        res.push_back(pre);
+    assert(pre == 0);
+    while (res.back() == 0)
+        res.pop_back();
 
     return BigInt(res, sign != other.sign);
 }
@@ -277,4 +290,12 @@ BigInt::toString() const
             res += hex2char((digits[i] >> (BITL - j)) & 0xF);
 
     return res;
+}
+
+void BigInt::debug() const
+{
+    fprintf(stderr, "%d %zu\n", sign, digits.size());
+    for (auto x : digits)
+        fprintf(stderr, "%#llX ", x);
+    fprintf(stderr, "\n");
 }

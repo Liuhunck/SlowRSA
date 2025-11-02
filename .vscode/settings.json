@@ -1,0 +1,6 @@
+{
+    "cmake.configureArgs": [
+        "-DBENCHMARK_ENABLE_GTEST_TESTS=OFF",
+        "-DBENCHMARK_ENABLE_TESTING=OFF"
+    ]
+}

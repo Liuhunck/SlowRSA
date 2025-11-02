@@ -20,11 +20,6 @@ TEST_F(BigIntegerTest, ToFromString)
     const char *ch = "0x8946541324844FA861635978465149876579846523458923458792389457923745896238945789273495872938475982374895738925AAAAA7984654679846FFFAAACCCCCCCCCCCCCBCFF9874651";
     auto a = BigInt(ch);
 
-    // fprintf(stderr, "%zu\n", a.digits.size());
-    // for (auto x : a.digits)
-    //     fprintf(stderr, "%#llX ", x);
-    // fprintf(stderr, "\n");
-
     auto to = a.toString();
     ASSERT_EQ(to, ch);
 
@@ -36,18 +31,75 @@ TEST_F(BigIntegerTest, ToFromString)
 
 TEST_F(BigIntegerTest, AddTest)
 {
-    system("python3 ../scripts/big_integer_test_gen add 100");
-    std::ifstream f("/tmp/big_integer_test_gen_add.txt");
+    ASSERT_EQ(system("python3 ../../scripts/big_integer_test_gen.py add -n 20 -m 1000000 -s 0"), 0);
+    std::ifstream f("/tmp/big_integer_test_add");
     ASSERT_TRUE(f.is_open());
 
     std::string line;
     while (std::getline(f, line))
     {
         BigInt x = BigInt(line);
+        ASSERT_EQ(x.toString(), line);
+
         ASSERT_TRUE(std::getline(f, line));
         BigInt y = BigInt(line);
+        ASSERT_EQ(y.toString(), line);
+
         ASSERT_TRUE(std::getline(f, line));
         BigInt z = BigInt(line);
+        ASSERT_EQ(z.toString(), line);
+
         ASSERT_EQ(x + y, z);
     }
+    f.close();
+}
+
+TEST_F(BigIntegerTest, SubTest)
+{
+    ASSERT_EQ(system("python3 ../../scripts/big_integer_test_gen.py sub -n 20 -m 1000000 -s 0"), 0);
+    std::ifstream f("/tmp/big_integer_test_sub");
+    ASSERT_TRUE(f.is_open());
+
+    std::string line;
+    while (std::getline(f, line))
+    {
+        BigInt x = BigInt(line);
+        ASSERT_EQ(x.toString(), line);
+
+        ASSERT_TRUE(std::getline(f, line));
+        BigInt y = BigInt(line);
+        ASSERT_EQ(y.toString(), line);
+
+        ASSERT_TRUE(std::getline(f, line));
+        BigInt z = BigInt(line);
+        ASSERT_EQ(z.toString(), line);
+
+        ASSERT_EQ(x - y, z);
+    }
+    f.close();
+}
+
+TEST_F(BigIntegerTest, MulTest)
+{
+    ASSERT_EQ(system("python3 ../../scripts/big_integer_test_gen.py mul -n 200 -m 40000 -s 0"), 0);
+    std::ifstream f("/tmp/big_integer_test_mul");
+    ASSERT_TRUE(f.is_open());
+
+    std::string line;
+    while (std::getline(f, line))
+    {
+        BigInt x = BigInt(line);
+        ASSERT_EQ(x.toString(), line);
+
+        ASSERT_TRUE(std::getline(f, line));
+        BigInt y = BigInt(line);
+        ASSERT_EQ(y.toString(), line);
+
+        ASSERT_TRUE(std::getline(f, line));
+        BigInt z = BigInt(line);
+        ASSERT_EQ(z.toString(), line);
+
+        ASSERT_EQ(x * y, z);
+    }
+    f.close();
 }

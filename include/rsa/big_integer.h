@@ -8,15 +8,16 @@
 
 #ifndef BIT_USE_32
 #define BIT unsigned long long
-#define BITT __int128_t
+#define BITT __uint128_t
 #define BITL 64
 #else
 #define BIT unsigned int
-#define BITT long long
+#define BITT unsigned long long
 #define BITL 32
 #endif
 
-#define BIT_MAX static_cast<BIT>(-1)
+#define BIT_MAX (static_cast<BITT>(1) << BITL)
+#define BIT_MASK static_cast<BIT>(-1)
 
 class BigInt
 {
@@ -38,6 +39,7 @@ public:
     bool operator!() const;
     bool operator==(const int other) const;
     bool operator==(const BigInt &other) const;
+    bool operator!=(const BigInt &other) const;
 
     // 基本算术运算
     BigInt operator+(const BigInt &other) const;
@@ -59,6 +61,9 @@ public:
 
     // 转换函数
     std::string toString() const;
+
+    // Just for debug
+    void debug() const;
 };
 
 #endif
