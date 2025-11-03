@@ -58,15 +58,12 @@ def generate_test(operator, number, max_digits, output_dir="/tmp"):
 
 def generate_div_test(number, max_digits, output_dir="/tmp"):
     with open(output_dir + f"/big_integer_test_div", "w") as f:
-        for _ in range(number * 2):
+        for _ in range(number):
             a_hex = generate_random_hex(max_digits)
             b_hex = generate_random_hex(max_digits)
 
             a_int = hex_to_int(a_hex)
             b_int = hex_to_int(b_hex)
-
-            if a_int < b_int and random.random() < 0.5:
-                continue
 
             c_int = a_int // b_int
             c_int_mod = a_int % b_int
@@ -105,7 +102,7 @@ def main():
     if args.operation != "div":
         generate_test(args.operation, args.number, args.max_digits)
     else:
-        generate_div_test(args.number, args.digits)
+        generate_div_test(args.number, args.max_digits)
 
 
 if __name__ == "__main__":

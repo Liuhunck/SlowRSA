@@ -143,7 +143,7 @@ unsign_compare(const std::vector<BIT> &a1, const std::vector<BIT> &a2)
 }
 
 static std::vector<BIT>
-eval_add_or_sub(const std::vector<BIT> &a1, const std::vector<BIT> &a2, bool is_sub)
+unsign_add(const std::vector<BIT> &a1, const std::vector<BIT> &a2)
 {
     int n1 = a1.size();
     int n2 = a2.size();
@@ -152,60 +152,118 @@ eval_add_or_sub(const std::vector<BIT> &a1, const std::vector<BIT> &a2, bool is_
     std::vector<BIT> res(n1, 0);
     BITT pre = 0;
 
-    if (is_sub)
+    for (int i = 0; i < n2; ++i)
     {
-        for (int i = 0; i < n2; ++i)
-        {
-            pre += a2[i];
-            if (pre > a1[i])
-            {
-                res[i] = static_cast<BIT>(-pre + BIT_MAX + a1[i]);
-                pre = 1;
-            }
-            else
-            {
-                res[i] = static_cast<BIT>(-pre + a1[i]);
-                pre = 0;
-            }
-        }
-        for (int i = n2; i < n1; ++i)
-        {
-            if (pre > a1[i])
-            {
-                res[i] = static_cast<BIT>(-pre + BIT_MAX + a1[i]);
-                pre = 1;
-            }
-            else
-            {
-                res[i] = static_cast<BIT>(-pre + a1[i]);
-                pre = 0;
-            }
-        }
-        assert(pre == 0);
-        while (!res.empty() && res.back() == 0)
-            res.pop_back();
+        pre = pre + a1[i] + a2[i];
+        res[i] = static_cast<BIT>(pre);
+        pre >>= BITL;
     }
-    else
+
+    for (int i = n2; i < n1; ++i)
     {
-        for (int i = 0; i < n2; ++i)
-        {
-            pre = pre + a1[i] + a2[i];
-            res[i] = static_cast<BIT>(pre);
-            pre >>= BITL;
-        }
-
-        for (int i = n2; i < n1; ++i)
-        {
-            pre = pre + a1[i];
-            res[i] = static_cast<BIT>(pre);
-            pre >>= BITL;
-        }
-
-        if (pre)
-            res.push_back(pre);
+        pre = pre + a1[i];
+        res[i] = static_cast<BIT>(pre);
+        pre >>= BITL;
     }
+
+    if (pre)
+        res.push_back(pre);
+    assert((pre >> BITL) == 0);
 
     return res;
+}
+
+static std::vector<BIT>
+unsign_sub(const std::vector<BIT> &a1, const std::vector<BIT> &a2)
+{
+    int n1 = a1.size();
+    int n2 = a2.size();
+    assert(n1 >= n2);
+
+    std::vector<BIT> res(n1, 0);
+    BITT pre = 0;
+
+    for (int i = 0; i < n2; ++i)
+    {
+        pre += a2[i];
+        if (pre > a1[i])
+        {
+            res[i] = static_cast<BIT>(-pre + BIT_MAX + a1[i]);
+            pre = 1;
+        }
+        else
+        {
+            res[i] = static_cast<BIT>(-pre + a1[i]);
+            pre = 0;
+        }
+    }
+    for (int i = n2; i < n1; ++i)
+    {
+        if (pre > a1[i])
+        {
+            res[i] = static_cast<BIT>(-pre + BIT_MAX + a1[i]);
+            pre = 1;
+        }
+        else
+        {
+            res[i] = static_cast<BIT>(-pre + a1[i]);
+            pre = 0;
+        }
+    }
+
+    assert(pre == 0);
+    while (!res.empty() && res.back() == 0)
+        res.pop_back();
+
+    return res;
+}
+
+static void
+unsign_sub_inplace(std::vector<BIT> &a1, const std::vector<BIT> &a2)
+{
+    int n1 = a1.size();
+    int n2 = a2.size();
+    assert(n1 >= n2);
+
+    BITT pre = 0;
+
+    for (int i = 0; i < n2; ++i)
+    {
+        pre += a2[i];
+        if (pre > a1[i])
+        {
+            a1[i] = static_cast<BIT>(-pre + BIT_MAX + a1[i]);
+            pre = 1;
+        }
+        else
+        {
+            a1[i] = static_cast<BIT>(-pre + a1[i]);
+            pre = 0;
+        }
+    }
+    for (int i = n2; i < n1; ++i)
+    {
+        if (pre > a1[i])
+        {
+            a1[i] = static_cast<BIT>(-pre + BIT_MAX + a1[i]);
+            pre = 1;
+        }
+        else
+        {
+            a1[i] = static_cast<BIT>(-pre + a1[i]);
+            pre = 0;
+        }
+    }
+
+    assert(pre == 0);
+    while (!a1.empty() && a1.back() == 0)
+        a1.pop_back();
+}
+
+static inline std::vector<BIT>
+unsign_add_or_sub(const std::vector<BIT> &a1, const std::vector<BIT> &a2, bool is_sub)
+{
+    return is_sub ? unsign_sub(a1, a2) : unsign_add(a1, a2);
 }
 
 BigInt
@@ -215,10 +273,11 @@ BigInt::operator+(const BigInt &other) const
     bool sub = sign != other.sign;
     if (cmp == 0 && sub)
         return BigInt(0);
+
     if (cmp >= 0)
-        return BigInt(eval_add_or_sub(digits, other.digits, sub), sign);
+        return BigInt(unsign_add_or_sub(digits, other.digits, sub), sign);
     else
-        return BigInt(eval_add_or_sub(other.digits, digits, sub), other.sign);
+        return BigInt(unsign_add_or_sub(other.digits, digits, sub), other.sign);
 }
 
 BigInt
@@ -230,9 +289,54 @@ BigInt::operator-(const BigInt &other) const
     if (cmp == 0 && sub)
         return BigInt(0);
     if (cmp >= 0)
-        return BigInt(eval_add_or_sub(digits, other.digits, sub), sign);
+        return BigInt(unsign_add_or_sub(digits, other.digits, sub), sign);
     else
-        return BigInt(eval_add_or_sub(other.digits, digits, sub), sign1);
+        return BigInt(unsign_add_or_sub(other.digits, digits, sub), sign1);
+}
+
+static std::vector<BIT>
+unsign_mul_one(const std::vector<BIT> &a1, BIT a2)
+{
+    if (a2 == 0)
+        return std::vector<BIT>();
+
+    int n1 = a1.size();
+    std::vector<BIT> res(n1, 0);
+
+    BITT pre = 0;
+    for (int i = 0; i < n1; ++i)
+    {
+        pre += static_cast<BITT>(1) * a1[i] * a2;
+        res[i] = static_cast<BIT>(pre);
+        pre >>= BITL;
+    }
+
+    if (pre)
+        res.push_back(pre);
+    assert((pre >> BITL) == 0);
+
+    return res;
+}
+
+static void
+unsign_mul_one_inplace(std::vector<BIT> &a1, BIT a2)
+{
+    if (a2 == 0)
+        return a1.clear(), void();
+
+    int n1 = a1.size();
+
+    BITT pre = 0;
+    for (int i = 0; i < n1; ++i)
+    {
+        pre += static_cast<BITT>(1) * a1[i] * a2;
+        a1[i] = static_cast<BIT>(pre);
+        pre >>= BITL;
+    }
+
+    if (pre)
+        a1.push_back(pre);
+    assert((pre >> BITL) == 0);
 }
 
 BigInt
@@ -266,7 +370,169 @@ BigInt::operator*(const BigInt &other) const
     while (res.back() == 0)
         res.pop_back();
 
-    return BigInt(res, sign != other.sign);
+    return BigInt(std::move(res), sign != other.sign);
+}
+
+static std::pair<std::vector<BIT>, std::vector<BIT>>
+unsign_div_and_mod(const std::vector<BIT> &a1, const std::vector<BIT> &a2)
+{
+    int n1 = a1.size();
+    int n2 = a2.size();
+    assert(n2 != 0 && n1 >= n2);
+    int n = n1 - n2 + 1;
+
+    std::vector<BIT> res(n, 0);
+    std::vector<BIT> rem(n2, 0);
+    for (int i = 0; i < n2; ++i)
+        rem[i] = a1[n + i - 1];
+    assert(rem.back() != 0);
+
+    int nr;
+    BITT x, y = a2.back(), l, r, mid;
+    for (int i = n - 1; i >= 0; --i)
+    {
+        x = 0;
+        nr = rem.size();
+        if (nr > n2)
+        {
+            assert(nr == n2 + 1);
+            x = (static_cast<BITT>(rem[n2]) << BITL) | static_cast<BITT>(rem[n2 - 1]);
+        }
+        else if (nr == n2)
+            x = rem[n2 - 1];
+        else
+            goto div_end;
+
+        r = std::min(x / y + 1, BIT_MASK), l = x / (y + 1);
+        while (l + 1 < r)
+        {
+            mid = (l + r) >> 1;
+            int cmp = unsign_compare(rem, unsign_mul_one(a2, static_cast<BIT>(mid)));
+            if (cmp == 0)
+            {
+                res[i] = static_cast<BIT>(mid);
+                rem.clear();
+                goto div_end;
+            }
+            if (cmp > 0)
+                l = mid;
+            else
+                r = mid;
+        }
+        if (l)
+        {
+            res[i] = static_cast<BIT>(l);
+            unsign_sub_inplace(rem, unsign_mul_one(a2, res[i]));
+            assert(unsign_compare(rem, a2) <= 0);
+        }
+
+        if (i == 0)
+            continue;
+
+    div_end:
+        nr = rem.size();
+        rem.push_back(0);
+        for (int j = nr; j >= 1; --j)
+            rem[j] = rem[j - 1];
+        rem[0] = a1[i - 1];
+        assert(rem.back() != 0);
+    }
+
+    while (!res.empty() && res.back() == 0)
+        res.pop_back();
+
+    return std::make_pair(std::move(res), std::move(rem));
+}
+
+BigInt
+BigInt::operator/(const BigInt &other) const
+{
+    int n1 = digits.size();
+    int n2 = other.digits.size();
+    if (n2 == 0)
+        throw std::runtime_error("div zero occured...");
+
+    if (n1 == 0)
+        return BigInt();
+
+    bool flag = sign != other.sign;
+
+    int cmp = unsign_compare(digits, other.digits);
+    if (cmp < 0)
+        return BigInt();
+    if (cmp == 0)
+        return BigInt(flag ? -1 : 1);
+
+    auto [res, _] = unsign_div_and_mod(digits, other.digits);
+    return BigInt(std::move(res), flag);
+}
+
+BigInt
+BigInt::operator%(const BigInt &other) const
+{
+    int n1 = digits.size();
+    int n2 = other.digits.size();
+    if (n2 == 0)
+        throw std::runtime_error("div zero occured...");
+
+    if (n1 == 0)
+        return BigInt();
+
+    bool flag = sign != other.sign;
+
+    int cmp = unsign_compare(digits, other.digits);
+    if (cmp < 0)
+        return BigInt(digits, flag);
+    if (cmp == 0)
+        return BigInt();
+
+    auto [_, rem] = unsign_div_and_mod(digits, other.digits);
+    return BigInt(std::move(rem), flag);
+}
+
+std::pair<BigInt, BigInt>
+BigInt::divAndMod(const BigInt &other) const
+{
+    int n1 = digits.size();
+    int n2 = other.digits.size();
+    if (n2 == 0)
+        throw std::runtime_error("div zero occured...");
+
+    if (n1 == 0)
+        return std::make_pair(BigInt(), BigInt());
+
+    bool flag = sign != other.sign;
+
+    int cmp = unsign_compare(digits, other.digits);
+    if (cmp < 0)
+        return std::make_pair(BigInt(), BigInt(digits, flag));
+    if (cmp == 0)
+        return std::make_pair(BigInt(flag ? -1 : 1), BigInt());
+
+    auto [res, rem] = unsign_div_and_mod(digits, other.digits);
+    return std::make_pair(BigInt(std::move(res), flag), BigInt(std::move(rem), flag));
+}
+
+BigInt BigInt::operator>>(const unsigned int bits) const
+{
+    int x = bits / BITL;
+    int y = bits % BITL;
+    int n = digits.size();
+    const BIT mask = (static_cast<BIT>(1) << y) - 1;
+
+    std::vector<BIT> res(n - x, 0);
+
+    for (int i = 0; i < n - x - 1; ++i)
+        res[i] = (digits[i + x] >> y) | (digits[i + x + 1] & mask);
+    res.back() = digits.back() >> y;
+    if (res.back())
+        res.pop_back();
+    return BigInt(std::move(res), sign);
+}
+
+BigInt BigInt::operator<<(const unsigned int bits) const
+{
+    return BigInt();
 }
 
 std::string
@@ -296,6 +562,14 @@ void BigInt::debug() const
 {
     fprintf(stderr, "%d %zu\n", sign, digits.size());
     for (auto x : digits)
+        fprintf(stderr, "%#llX ", x);
+    fprintf(stderr, "\n");
+}
+
+void BigInt::debug(const std::vector<BIT> &vec)
+{
+    fprintf(stderr, "%d %zu\n", 0, vec.size());
+    for (auto x : vec)
         fprintf(stderr, "%#llX ", x);
     fprintf(stderr, "\n");
 }

@@ -81,7 +81,7 @@ TEST_F(BigIntegerTest, SubTest)
 
 TEST_F(BigIntegerTest, MulTest)
 {
-    ASSERT_EQ(system("python3 ../../scripts/big_integer_test_gen.py mul -n 200 -m 40000 -s 0"), 0);
+    ASSERT_EQ(system("python3 ../../scripts/big_integer_test_gen.py mul -n 30 -m 100000 -s 0"), 0);
     std::ifstream f("/tmp/big_integer_test_mul");
     ASSERT_TRUE(f.is_open());
 
@@ -100,6 +100,40 @@ TEST_F(BigIntegerTest, MulTest)
         ASSERT_EQ(z.toString(), line);
 
         ASSERT_EQ(x * y, z);
+    }
+    f.close();
+}
+
+TEST_F(BigIntegerTest, DivTest)
+{
+    ASSERT_EQ(system("python3 ../../scripts/big_integer_test_gen.py div -n 10 -m 100000 -s 0"), 0);
+    std::ifstream f("/tmp/big_integer_test_div");
+    ASSERT_TRUE(f.is_open());
+
+    std::string line;
+    while (std::getline(f, line))
+    {
+        BigInt x = BigInt(line);
+        ASSERT_EQ(x.toString(), line);
+
+        ASSERT_TRUE(std::getline(f, line));
+        BigInt y = BigInt(line);
+        ASSERT_EQ(y.toString(), line);
+
+        ASSERT_TRUE(std::getline(f, line));
+        BigInt z = BigInt(line);
+        ASSERT_EQ(z.toString(), line);
+
+        ASSERT_TRUE(std::getline(f, line));
+        BigInt zm = BigInt(line);
+        ASSERT_EQ(zm.toString(), line);
+
+        auto [xdy, xmy] = x.divAndMod(y);
+        ASSERT_EQ(xdy, z);
+        ASSERT_EQ(xmy, zm);
+
+        ASSERT_EQ(x / y, z);
+        ASSERT_EQ(x % y, zm);
     }
     f.close();
 }

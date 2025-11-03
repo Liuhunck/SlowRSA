@@ -4,9 +4,9 @@
 #include <vector>
 #include <string>
 
-// #define BIT_USE_32
+#define BIT_USE_64
 
-#ifndef BIT_USE_32
+#ifdef BIT_USE_64
 #define BIT unsigned long long
 #define BITT __uint128_t
 #define BITL 64
@@ -17,7 +17,7 @@
 #endif
 
 #define BIT_MAX (static_cast<BITT>(1) << BITL)
-#define BIT_MASK static_cast<BIT>(-1)
+#define BIT_MASK (BIT_MAX - 1)
 
 class BigInt
 {
@@ -47,6 +47,11 @@ public:
     BigInt operator*(const BigInt &other) const;
     BigInt operator/(const BigInt &other) const;
     BigInt operator%(const BigInt &other) const;
+    std::pair<BigInt, BigInt> divAndMod(const BigInt &other) const;
+
+    // 基本位运算
+    BigInt operator>>(const unsigned int bits) const;
+    BigInt operator<<(const unsigned int bits) const;
 
     // 模幂运算 (核心)
     BigInt modPow(const BigInt &exp, const BigInt &mod) const;
@@ -64,6 +69,7 @@ public:
 
     // Just for debug
     void debug() const;
+    static void debug(const std::vector<BIT> &);
 };
 
 #endif
