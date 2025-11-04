@@ -6,14 +6,16 @@
 
 #define BIT_USE_64
 
-#ifdef BIT_USE_64
+#if defined(BIT_USE_64)
 #define BIT unsigned long long
 #define BITT __uint128_t
 #define BITL 64
+#define BIT_CTZ __builtin_ctzll
 #else
 #define BIT unsigned int
 #define BITT unsigned long long
 #define BITL 32
+#define BIT_CTZ __builtin_ctz
 #endif
 
 #define BIT_MAX (static_cast<BITT>(1) << BITL)
@@ -30,19 +32,29 @@ public:
     BigInt(const char *str, int len = 0);
     BigInt(const std::string &str);
 
+    BigInt(const BigInt &other) : digits(other.digits), sign(other.sign) {}
+    BigInt(BigInt &&other) : digits(std::move(other.digits)), sign(other.sign) {}
+    void operator=(const BigInt &other) { digits = other.digits, sign = other.sign; }
+    void operator=(BigInt &&other) { digits = std::move(other.digits), sign = other.sign; }
     BigInt(std::vector<BIT> &&digits, bool sign) : digits(digits), sign(sign) {}
     BigInt(const std::vector<BIT> &digits, bool sign) : digits(digits), sign(sign) {}
 
+    unsigned int ctz() const;
+
     // 布尔运算
     explicit operator bool() const;
-
     bool operator!() const;
     bool operator==(const int other) const;
     bool operator==(const BigInt &other) const;
     bool operator!=(const BigInt &other) const;
+    bool operator>(const int other) const;
+    bool operator>(const BigInt &other) const;
+    bool operator<(const int other) const;
+    bool operator<(const BigInt &other) const;
 
     // 基本算术运算
     BigInt operator+(const BigInt &other) const;
+    // BigInt operator-(const int other) const;
     BigInt operator-(const BigInt &other) const;
     BigInt operator*(const BigInt &other) const;
     BigInt operator/(const BigInt &other) const;
@@ -50,19 +62,14 @@ public:
     std::pair<BigInt, BigInt> divAndMod(const BigInt &other) const;
 
     // 基本位运算
+    BigInt operator|(const unsigned int other) const;
+    void operator|=(const unsigned int other);
+
     BigInt operator>>(const unsigned int bits) const;
     BigInt operator<<(const unsigned int bits) const;
 
     // 模幂运算 (核心)
     BigInt modPow(const BigInt &exp, const BigInt &mod) const;
-
-    // 数论函数
-    BigInt gcd(const BigInt &other) const;
-    BigInt modInverse(const BigInt &mod) const;
-
-    // 随机数生成
-    static BigInt random(int bitLength);
-    static BigInt randomPrime(int bitLength);
 
     // 转换函数
     std::string toString() const;

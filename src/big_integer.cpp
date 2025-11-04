@@ -1,5 +1,6 @@
 #include <rsa/big_integer.h>
 
+#include <bitset>
 #include <cstring>
 #include <cassert>
 #include <iostream>
@@ -78,6 +79,24 @@ BigInt::BigInt(const char *str, int len)
 
 BigInt::BigInt(const std::string &str) : BigInt(str.c_str(), str.length()) {}
 
+unsigned int
+BigInt::ctz() const
+{
+    int n = digits.size();
+    unsigned int res = 0;
+    for (int i = 0; i < n; ++i)
+    {
+        if (digits[i] == 0)
+            res += BITL;
+        else
+        {
+            res += BIT_CTZ(digits[i]);
+            return res;
+        }
+    }
+    return res;
+}
+
 BigInt::operator bool() const
 {
     return digits.size() != 0;
@@ -140,6 +159,71 @@ unsign_compare(const std::vector<BIT> &a1, const std::vector<BIT> &a2)
             return -1;
     }
     return 0;
+}
+
+bool BigInt::operator>(const int other) const
+{
+    bool sign1 = other < 0;
+    if (sign != sign1)
+        return sign1;
+    BIT a = static_cast<BIT>(sign ? -other : other);
+    bool ret = true;
+    switch (digits.size())
+    {
+    case 0:
+        if (a == 0)
+            return false;
+        ret = false;
+        break;
+    case 1:
+        if (a == digits.front())
+            return false;
+        ret = digits.front() > a;
+        break;
+    default:
+        break;
+    }
+    return ret != sign;
+}
+
+bool BigInt::operator>(const BigInt &other) const
+{
+    if (other.sign != sign)
+        return other.sign;
+    int cmp = unsign_compare(digits, other.digits);
+    return (cmp != 0) && ((cmp > 0) != sign);
+}
+
+bool BigInt::operator<(const int other) const
+{
+    bool sign1 = other < 0;
+    if (sign != sign1)
+        return sign;
+    BIT a = static_cast<BIT>(sign ? -other : other);
+    bool ret = false;
+    switch (digits.size())
+    {
+    case 0:
+        if (a == 0)
+            return false;
+        ret = true;
+        break;
+    case 1:
+        if (a == digits.front())
+            return false;
+        ret = digits.front() < a;
+        break;
+    default:
+        break;
+    }
+    return ret != sign;
+}
+
+bool BigInt::operator<(const BigInt &other) const
+{
+    int flag = other.sign != sign;
+    int cmp = unsign_compare(digits, other.digits);
+    return (cmp != 0) && ((cmp < 0) != flag);
 }
 
 static std::vector<BIT>
@@ -403,7 +487,7 @@ unsign_div_and_mod(const std::vector<BIT> &a1, const std::vector<BIT> &a2)
         else
             goto div_end;
 
-        r = std::min(x / y + 1, BIT_MASK), l = x / (y + 1);
+        r = std::min(x / y + 1, BIT_MAX), l = x / (y + 1);
         while (l + 1 < r)
         {
             mid = (l + r) >> 1;
@@ -513,7 +597,27 @@ BigInt::divAndMod(const BigInt &other) const
     return std::make_pair(BigInt(std::move(res), flag), BigInt(std::move(rem), flag));
 }
 
-BigInt BigInt::operator>>(const unsigned int bits) const
+BigInt
+BigInt::operator|(const unsigned int other) const
+{
+    std::vector<BIT> res = digits;
+    if (res.empty())
+        res.push_back(other);
+    else
+        res.front() |= other;
+    return BigInt(std::move(res), sign);
+}
+
+void BigInt::operator|=(const unsigned int other)
+{
+    if (digits.empty())
+        digits.push_back(other);
+    else
+        digits.front() |= other;
+}
+
+BigInt
+BigInt::operator>>(const unsigned int bits) const
 {
     int x = bits / BITL;
     int y = bits % BITL;
@@ -532,7 +636,38 @@ BigInt BigInt::operator>>(const unsigned int bits) const
 
 BigInt BigInt::operator<<(const unsigned int bits) const
 {
+    throw std::runtime_error("not implement function...");
     return BigInt();
+}
+
+BigInt
+BigInt::modPow(const BigInt &exp, const BigInt &mod) const
+{
+    BigInt x = *this;
+    BigInt res = BigInt(1);
+    BIT tmp;
+    int n = exp.digits.size();
+    for (int i = 0; i < n - 1; ++i)
+    {
+        BIT tmp = exp.digits[i];
+        for (int j = 0; j < BITL; ++j)
+        {
+            if (tmp & 1)
+                res = res * x % mod;
+            x = x * x % mod;
+        }
+    }
+    tmp = exp.digits.back();
+    while (true)
+    {
+        if (tmp & 1)
+            res = res * x % mod;
+        tmp >>= 1;
+        if (tmp == 0)
+            break;
+        x = x * x % mod;
+    }
+    return res;
 }
 
 std::string
