@@ -2,11 +2,12 @@
 
 #include <random>
 #include <cassert>
+#include <iostream>
 #include <algorithm>
 
 namespace BNRandom
 {
-#define NUMPRIMES 2048
+    static bool isPrime(BigInt w);
 
     std::mt19937 g;
 
@@ -22,31 +23,42 @@ namespace BNRandom
         g.seed(sseq);
     }
 
-    inline unsigned char
+    unsigned char
     getRandByte()
     {
         return g() & 0xFF;
     }
 
+    BIT
+    getRandWord()
+    {
+#if defined(BIT_USE_64)
+        return (static_cast<BIT>(g()) << 32) | g();
+#else
+        return g();
+#endif
+    }
+
     BigInt
-    getRandInt(int bits)
+    getRandInt(int bits, bool keep)
     {
         int n = bits / BITL;
         int m = bits % BITL;
         std::vector<BIT> res(n);
         for (int i = 0; i < n; ++i)
-        {
-            BIT tmp = getRandByte();
-            for (int j = 1; j < (BITL / 8); ++j)
-                tmp = (tmp << 8) | getRandByte();
-            res[i] = tmp;
-        }
+            res[i] = getRandWord();
         if (m != 0)
         {
-            int x = m / 8, y = m % 8, mask = 1 << y;
-            BIT tmp = getRandByte() & (mask - 1) | (mask / 2);
-            for (int j = 0; j < x; ++j)
-                tmp = (tmp << 8) | getRandByte();
+            BIT max = static_cast<BIT>(1) << m, mask = max - 1;
+            BIT tmp = getRandWord() & mask;
+            if (keep)
+                tmp |= (max >> 1);
+            res.push_back(tmp);
+        }
+        else
+        {
+            if (keep)
+                res.back() |= static_cast<BIT>(1) << (BITL - 1);
         }
         return BigInt(std::move(res), 0);
     }
@@ -54,15 +66,26 @@ namespace BNRandom
     BigInt
     getRandPrime(int bits)
     {
-        assert(bits > 16);
-        while (true)
-        {
-            BigInt tmp = getRandInt(bits);
-            tmp |= 0x3;
+        if (bits <= 16)
+            throw std::runtime_error("prime bits should greater than 16...");
 
-            if (isPrime(tmp, bits) && isPrime(tmp >> 1, bits - 1))
+        BigInt tmp = getRandInt(bits);
+        tmp |= 0x3;
+
+        int try_max_time = 1000;
+        for (int round = 0; round < try_max_time; ++round)
+        {
+            if (isPrime(tmp) && isPrime(tmp >> 1))
+            {
+#if not defined(NDEBUG)
+                std::cerr << "tried: " << round + 1 << std::endl;
+#endif
                 return tmp;
+            }
+            tmp += 4;
         }
+        assert(0 && "get prime over the limit rounds...");
+        return BigInt();
     }
 
     // Miller-Rabin 测试最小的轮数，参考 openssl 的实现标准
@@ -90,45 +113,54 @@ namespace BNRandom
     }
 
     static bool
-    isPrime(BigInt w, int bits)
+    isPrime(BigInt w)
     {
-        int tdiv = getTrialDivision(bits);
+        int bits = w.bits();
+        // int tdiv = getTrialDivision(bits);
+        int tdiv = 2048;
         for (int i = 1; i < tdiv; ++i)
-            if (w % i == 0)
+            if (w % primes[i] == 0)
                 return false;
 
         BigInt w1 = w - 1;
-        unsigned int a = w1.ctz();
+        int a = w1.ctz();
+        assert(a >= 1);
         BigInt m = w1 >> a;
 
-        int iter = getMinMRChecks(bits);
-
-        while (iter--)
+        int iter = getMinMRChecks(bits) + 500;
+        while (iter)
         {
-            BigInt b = getRandInt(bits);
+            BigInt b = getRandInt(bits, false);
             if (b > w1)
+            {
+                // std::cerr << "b > w1\n";
                 b = b - w;
+            }
             if (b < 3)
             {
-                iter++;
+                std::cerr << "b < 3\n";
                 continue;
             }
+            b |= 1;
+
             BigInt z = b.modPow(m, w);
             if (z == 1 || z == w1)
-                continue;
+                goto loop_cont;
 
             for (int j = 1; j < a; ++j)
             {
                 z = z * z % w;
                 if (z == w1)
-                    goto end;
+                    goto loop_cont;
                 if (z == 1)
                     return false;
             }
             z = z * z % w;
             if (z == 1)
                 return false;
-        end:
+
+        loop_cont:
+            --iter;
         }
         return true;
     }

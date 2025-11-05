@@ -6,8 +6,11 @@
 namespace BNRandom
 {
     void initRandom(int seed = 0);
-    inline unsigned char getRandByte();
-    BigInt getRandInt(int bits);
+
+    unsigned char getRandByte();
+    BIT getRandWord();
+
+    BigInt getRandInt(int bits, bool keep = true);
     BigInt getRandPrime(int bits);
 }
 

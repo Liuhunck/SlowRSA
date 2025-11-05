@@ -6,6 +6,7 @@ function(add_unit_test TARGET_NAME)
     target_include_directories(${TARGET_NAME} PRIVATE ${CMAKE_SOURCE_DIR}/include)
     target_link_libraries(${TARGET_NAME}
         PRIVATE
+        bigint_lib
         GTest::gtest_main
         # OpenMP::OpenMP_CXX
     )
@@ -16,4 +17,6 @@ add_unit_test(BigIntegerTest
     big_integer_test.cpp
 )
 
-target_link_libraries(BigIntegerTest PRIVATE bigint_lib)
+add_unit_test(RandomTest
+    random_test.cpp
+)

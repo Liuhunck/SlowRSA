@@ -75,12 +75,71 @@ def generate_div_test(number, max_digits, output_dir="/tmp"):
         f.flush()
 
 
+def generate_modpow_test(number, max_digits, output_dir="/tmp"):
+    with open(output_dir + f"/big_integer_test_modpow", "w") as f:
+        for _ in range(number):
+            a_hex = generate_random_hex(max_digits)
+            b_hex = generate_random_hex(max_digits)
+            c_hex = generate_random_hex(max_digits)
+
+            a_int = hex_to_int(a_hex)
+            b_int = hex_to_int(b_hex)
+            c_int = hex_to_int(c_hex)
+
+            a_int %= c_int
+
+            mp = pow(a_int, b_int, c_int)
+
+            f.write("\n".join([a_hex, b_hex, c_hex, int_to_hex(mp)]) + "\n")
+        f.flush()
+
+
+def generate_rshift_test(number, max_digits, output_dir="/tmp"):
+    with open(output_dir + f"/big_integer_test_rshift", "w") as f:
+        for _ in range(number):
+            a_hex = generate_random_hex(max_digits)
+            b = random.randint(0, max_digits // 60)
+
+            a_int = hex_to_int(a_hex)
+
+            c_int = a_int // (2**b)
+
+            f.write("\n".join([a_hex, str(b), int_to_hex(c_int)]) + "\n")
+        f.flush()
+
+
+def generate_bigcmp_test(number, max_digits, output_dir="/tmp"):
+    with open(output_dir + f"/big_integer_test_bigcmp", "w") as f:
+        for _ in range(number):
+            a_hex = generate_random_hex(max_digits)
+            b_hex = generate_random_hex(max_digits)
+
+            a_int = hex_to_int(a_hex)
+            b_int = hex_to_int(b_hex)
+
+            a_flag = random.choice([True, False])
+            b_flag = random.choice([True, False])
+
+            if a_flag:
+                a_hex = "-" + a_hex
+                a_int = -a_int
+            if b_flag:
+                b_hex = "-" + b_hex
+                b_int = -b_int
+
+            c = f"{(a_int > b_int):d} {(a_int == b_int):d} {(a_int < b_int):d}"
+            d = f"{(a_int > 0):d} {(a_int == 0):d} {(a_int < 0):d}"
+
+            f.write("\n".join([a_hex, b_hex, c, d]) + "\n")
+        f.flush()
+
+
 def main():
     parser = argparse.ArgumentParser(description="生成大整数运算测试用例")
     parser.add_argument(
         "operation",
-        choices=["add", "sub", "mul", "div"],
-        help="运算类型: add(加), sub(减), mul(乘), div(除)",
+        choices=["add", "sub", "mul", "div", "rshift", "modpow", "bigcmp"],
+        help="运算类型: add(加), sub(减), mul(乘), div(除), rshift(右移), modpow(指数模), bigcmp(比较)",
     )
     parser.add_argument(
         "-n", "--number", type=int, default=1, help="生成测试用例的数量 (默认: 1)"
@@ -99,10 +158,16 @@ def main():
 
     print(f"生成 {args.number} 个 {args.operation} 运算测试用例")
 
-    if args.operation != "div":
+    if args.operation in ["add", "sub", "mul"]:
         generate_test(args.operation, args.number, args.max_digits)
-    else:
+    elif args.operation == "div":
         generate_div_test(args.number, args.max_digits)
+    elif args.operation == "rshift":
+        generate_rshift_test(args.number, args.max_digits)
+    elif args.operation == "modpow":
+        generate_modpow_test(args.number, args.max_digits)
+    elif args.operation == "bigcmp":
+        generate_bigcmp_test(args.number, args.max_digits)
 
 
 if __name__ == "__main__":

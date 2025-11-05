@@ -2,6 +2,7 @@ include_directories(${CMAKE_SOURCE_DIR}/include)
 
 add_library(bigint_lib
     big_integer.cpp
+    random.cpp
 )
 
 add_executable(rsa

@@ -3,6 +3,7 @@
 
 #include <vector>
 #include <string>
+#include "prime.h"
 
 #define BIT_USE_64
 
@@ -10,11 +11,13 @@
 #define BIT unsigned long long
 #define BITT __uint128_t
 #define BITL 64
+#define BIT_CLZ __builtin_clzll
 #define BIT_CTZ __builtin_ctzll
 #else
 #define BIT unsigned int
 #define BITT unsigned long long
 #define BITL 32
+#define BIT_CLZ __builtin_clz
 #define BIT_CTZ __builtin_ctz
 #endif
 
@@ -39,34 +42,48 @@ public:
     BigInt(std::vector<BIT> &&digits, bool sign) : digits(digits), sign(sign) {}
     BigInt(const std::vector<BIT> &digits, bool sign) : digits(digits), sign(sign) {}
 
-    unsigned int ctz() const;
+    int clz() const;
+    int ctz() const;
+    int bits() const;
 
     // 布尔运算
     explicit operator bool() const;
     bool operator!() const;
+    bool operator!=(const BigInt &other) const;
+
     bool operator==(const int other) const;
     bool operator==(const BigInt &other) const;
-    bool operator!=(const BigInt &other) const;
+
     bool operator>(const int other) const;
     bool operator>(const BigInt &other) const;
+
     bool operator<(const int other) const;
     bool operator<(const BigInt &other) const;
 
     // 基本算术运算
     BigInt operator+(const BigInt &other) const;
-    // BigInt operator-(const int other) const;
+    BigInt &operator+=(const int other);
+
+    BigInt operator-(const int other) const;
     BigInt operator-(const BigInt &other) const;
+
     BigInt operator*(const BigInt &other) const;
+
     BigInt operator/(const BigInt &other) const;
+
+    prime_t operator%(const prime_t other) const;
     BigInt operator%(const BigInt &other) const;
+
     std::pair<BigInt, BigInt> divAndMod(const BigInt &other) const;
 
     // 基本位运算
     BigInt operator|(const unsigned int other) const;
     void operator|=(const unsigned int other);
 
-    BigInt operator>>(const unsigned int bits) const;
-    BigInt operator<<(const unsigned int bits) const;
+    BigInt operator>>(const int bits) const;
+    BigInt &operator>>=(const int bits);
+
+    BigInt operator<<(const int bits) const;
 
     // 模幂运算 (核心)
     BigInt modPow(const BigInt &exp, const BigInt &mod) const;
@@ -76,6 +93,7 @@ public:
 
     // Just for debug
     void debug() const;
+    static void debug(const BIT, char end = '\n');
     static void debug(const std::vector<BIT> &);
 };
 

@@ -1,5 +1,4 @@
 #include <rsa/big_integer.h>
-
 #include <bitset>
 #include <cstring>
 #include <cassert>
@@ -79,8 +78,14 @@ BigInt::BigInt(const char *str, int len)
 
 BigInt::BigInt(const std::string &str) : BigInt(str.c_str(), str.length()) {}
 
-unsigned int
-BigInt::ctz() const
+int BigInt::clz() const
+{
+    if (digits.empty())
+        return 0;
+    return BIT_CLZ(digits.back());
+}
+
+int BigInt::ctz() const
 {
     int n = digits.size();
     unsigned int res = 0;
@@ -97,6 +102,11 @@ BigInt::ctz() const
     return res;
 }
 
+int BigInt::bits() const
+{
+    return BITL * digits.size() - clz();
+}
+
 BigInt::operator bool() const
 {
     return digits.size() != 0;
@@ -110,11 +120,13 @@ bool BigInt::operator!() const
 bool BigInt::operator==(const int other) const
 {
     if (other == 0)
-        return digits.size() == 0;
-    bool flag = other > 0;
+        return digits.empty();
+    if (digits.size() != 1)
+        return false;
+    bool flag = other < 0;
     if (flag != sign)
         return false;
-    return digits[0] == static_cast<BIT>(flag ? -other : other);
+    return digits.front() == static_cast<BIT>(flag ? -other : other);
 }
 
 bool BigInt::operator==(const BigInt &other) const
@@ -166,7 +178,7 @@ bool BigInt::operator>(const int other) const
     bool sign1 = other < 0;
     if (sign != sign1)
         return sign1;
-    BIT a = static_cast<BIT>(sign ? -other : other);
+    BIT a = static_cast<BIT>(sign1 ? -other : other);
     bool ret = true;
     switch (digits.size())
     {
@@ -199,7 +211,7 @@ bool BigInt::operator<(const int other) const
     bool sign1 = other < 0;
     if (sign != sign1)
         return sign;
-    BIT a = static_cast<BIT>(sign ? -other : other);
+    BIT a = static_cast<BIT>(sign1 ? -other : other);
     bool ret = false;
     switch (digits.size())
     {
@@ -221,9 +233,10 @@ bool BigInt::operator<(const int other) const
 
 bool BigInt::operator<(const BigInt &other) const
 {
-    int flag = other.sign != sign;
+    if (other.sign != sign)
+        return sign;
     int cmp = unsign_compare(digits, other.digits);
-    return (cmp != 0) && ((cmp < 0) != flag);
+    return (cmp != 0) && ((cmp < 0) != sign);
 }
 
 static std::vector<BIT>
@@ -362,6 +375,52 @@ BigInt::operator+(const BigInt &other) const
         return BigInt(unsign_add_or_sub(digits, other.digits, sub), sign);
     else
         return BigInt(unsign_add_or_sub(other.digits, digits, sub), other.sign);
+}
+
+BigInt &
+BigInt::operator+=(const int other)
+{
+    if (other < 0 || sign)
+        throw std::runtime_error("+= with -number is not implement...");
+
+    BITT pre = other;
+    for (auto &x : digits)
+    {
+        pre += x;
+        x = static_cast<BIT>(pre);
+        pre >>= BITL;
+        if (pre == 0)
+            return *this;
+    }
+    if (pre)
+        digits.push_back(static_cast<BIT>(pre));
+    assert((pre >> BITL) == 0);
+    return *this;
+}
+
+BigInt
+BigInt::operator-(const int other) const
+{
+    if (other < 0 || sign)
+        throw std::runtime_error("- with -number is not implement...");
+
+    int n = digits.size();
+    std::vector<BIT> res(digits.size(), 0);
+    BITT pre = other;
+    for (int i = 0; i < n; ++i)
+    {
+        if (pre > digits[i])
+        {
+            res[i] = static_cast<BIT>(-pre + BIT_MAX + digits[i]);
+            pre = 1;
+        }
+        else
+        {
+            res[i] = static_cast<BIT>(-pre + digits[i]);
+            pre = 0;
+        }
+    }
+    return BigInt(std::move(res), false);
 }
 
 BigInt
@@ -551,6 +610,20 @@ BigInt::operator/(const BigInt &other) const
     return BigInt(std::move(res), flag);
 }
 
+prime_t
+BigInt::operator%(const prime_t other) const
+{
+    assert(sign == false);
+    int n = digits.size();
+    BITT pre = 0;
+    for (int i = n - 1; i >= 0; --i)
+    {
+        pre = (pre << BITL) | digits[i];
+        pre %= other;
+    }
+    return static_cast<prime_t>(pre);
+}
+
 BigInt
 BigInt::operator%(const BigInt &other) const
 {
@@ -617,27 +690,74 @@ void BigInt::operator|=(const unsigned int other)
 }
 
 BigInt
-BigInt::operator>>(const unsigned int bits) const
+BigInt::operator>>(const int bits) const
 {
-    int x = bits / BITL;
-    int y = bits % BITL;
-    int n = digits.size();
-    const BIT mask = (static_cast<BIT>(1) << y) - 1;
+    if (bits < 0)
+        throw std::runtime_error("rshift bits less than 0...");
+    if (bits == 0)
+        return *this;
+    if (bits >= this->bits())
+        return BigInt();
 
+    const int x = bits / BITL;
+    const int y = bits % BITL;
+    const int n = digits.size();
     std::vector<BIT> res(n - x, 0);
 
-    for (int i = 0; i < n - x - 1; ++i)
-        res[i] = (digits[i + x] >> y) | (digits[i + x + 1] & mask);
-    res.back() = digits.back() >> y;
-    if (res.back())
-        res.pop_back();
+    if (y == 0)
+    {
+        for (int i = 0; i < n - x; ++i)
+            res[i] = digits[i + x];
+    }
+    else
+    {
+        for (int i = 0; i < n - x - 1; ++i)
+            res[i] = (digits[i + x] >> y) | (digits[i + x + 1] << (BITL - y));
+        res.back() = digits.back() >> y;
+        if (res.back() == 0)
+            res.pop_back();
+    }
+
     return BigInt(std::move(res), sign);
 }
 
-BigInt BigInt::operator<<(const unsigned int bits) const
+BigInt &
+BigInt::operator>>=(const int bits)
+{
+    if (bits < 0)
+        throw std::runtime_error("rshift bits less than 0...");
+    if (bits == 0)
+        return *this;
+    if (bits >= this->bits())
+        return digits.clear(), *this;
+
+    const int x = bits / BITL;
+    const int y = bits % BITL;
+    const int n = digits.size();
+
+    if (y == 0)
+    {
+        for (int i = 0; i < n - x; ++i)
+            digits[i] = digits[i + x];
+        digits.resize(n - x);
+    }
+    else
+    {
+        for (int i = 0; i < n - x - 1; ++i)
+            digits[i] = (digits[i + x] >> y) | (digits[i + x + 1] << (BITL - y));
+        digits[n - x - 1] = digits.back() >> y;
+        digits.resize(n - x);
+        if (digits.back() == 0)
+            digits.pop_back();
+    }
+
+    return *this;
+}
+
+BigInt BigInt::operator<<(const int bits) const
 {
     throw std::runtime_error("not implement function...");
-    return BigInt();
+    return BigInt(bits);
 }
 
 BigInt
@@ -655,6 +775,7 @@ BigInt::modPow(const BigInt &exp, const BigInt &mod) const
             if (tmp & 1)
                 res = res * x % mod;
             x = x * x % mod;
+            tmp >>= 1;
         }
     }
     tmp = exp.digits.back();
@@ -697,14 +818,23 @@ void BigInt::debug() const
 {
     fprintf(stderr, "%d %zu\n", sign, digits.size());
     for (auto x : digits)
-        fprintf(stderr, "%#llX ", x);
+        BigInt::debug(x, ' ');
     fprintf(stderr, "\n");
+}
+
+void BigInt::debug(const BIT x, char end)
+{
+#if defined(BIT_USE_64)
+    fprintf(stderr, "0x%016llX%c", x, end);
+#else
+    fprintf(stderr, "0x%08X%c", x, end);
+#endif
 }
 
 void BigInt::debug(const std::vector<BIT> &vec)
 {
     fprintf(stderr, "%d %zu\n", 0, vec.size());
     for (auto x : vec)
-        fprintf(stderr, "%#llX ", x);
+        BigInt::debug(x, ' ');
     fprintf(stderr, "\n");
 }
