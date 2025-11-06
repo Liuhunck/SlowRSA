@@ -64,25 +64,28 @@ namespace BNRandom
     }
 
     BigInt
-    getRandPrime(int bits)
+    getRandPrime(int bits, bool safe)
     {
         if (bits <= 16)
             throw std::runtime_error("prime bits should greater than 16...");
 
         BigInt tmp = getRandInt(bits);
-        tmp |= 0x3;
+        tmp |= safe ? 0x3 : 0x1;
+        int delta = safe ? 4 : 2;
 
-        int try_max_time = 1000;
+        int try_max_time = 10000000;
         for (int round = 0; round < try_max_time; ++round)
         {
-            if (isPrime(tmp) && isPrime(tmp >> 1))
+            if (isPrime(tmp))
             {
+                if (safe && !isPrime(tmp >> 1))
+                    continue;
 #if not defined(NDEBUG)
                 std::cerr << "tried: " << round + 1 << std::endl;
 #endif
                 return tmp;
             }
-            tmp += 4;
+            tmp += delta;
         }
         assert(0 && "get prime over the limit rounds...");
         return BigInt();
@@ -112,12 +115,12 @@ namespace BNRandom
         return NUMPRIMES;
     }
 
+    // 质数判定，Miller-Rabin
     static bool
     isPrime(BigInt w)
     {
         int bits = w.bits();
-        // int tdiv = getTrialDivision(bits);
-        int tdiv = 2048;
+        int tdiv = getTrialDivision(bits);
         for (int i = 1; i < tdiv; ++i)
             if (w % primes[i] == 0)
                 return false;
@@ -127,21 +130,14 @@ namespace BNRandom
         assert(a >= 1);
         BigInt m = w1 >> a;
 
-        int iter = getMinMRChecks(bits) + 500;
+        int iter = getMinMRChecks(bits);
         while (iter)
         {
             BigInt b = getRandInt(bits, false);
             if (b > w1)
-            {
-                // std::cerr << "b > w1\n";
                 b = b - w;
-            }
             if (b < 3)
-            {
-                std::cerr << "b < 3\n";
                 continue;
-            }
-            b |= 1;
 
             BigInt z = b.modPow(m, w);
             if (z == 1 || z == w1)
@@ -155,9 +151,8 @@ namespace BNRandom
                 if (z == 1)
                     return false;
             }
-            z = z * z % w;
-            if (z == 1)
-                return false;
+
+            return false;
 
         loop_cont:
             --iter;

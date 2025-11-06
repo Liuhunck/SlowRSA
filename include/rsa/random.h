@@ -11,7 +11,7 @@ namespace BNRandom
     BIT getRandWord();
 
     BigInt getRandInt(int bits, bool keep = true);
-    BigInt getRandPrime(int bits);
+    BigInt getRandPrime(int bits, bool safe = false);
 }
 
 #endif

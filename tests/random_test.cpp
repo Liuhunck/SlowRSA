@@ -43,7 +43,7 @@ TEST_F(RandomTest, RandomIntTest)
 
 TEST_F(RandomTest, RandomPrimeTest)
 {
-    int max_test = 100;
+    int max_test = 512;
     for (int i = max_test; i <= max_test; ++i)
     {
         BigInt p = BNRandom::getRandPrime(i);
