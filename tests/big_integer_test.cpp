@@ -108,6 +108,14 @@ TEST_F(BigIntegerTest, MulTest)
 
 TEST_F(BigIntegerTest, DivTest)
 {
+    BigInt t = BigInt(6);
+    BigInt tt = BigInt(1);
+    auto [x, y] = t.divAndMod(tt);
+    x.debug();
+    y.debug();
+    ASSERT_EQ(x, 6);
+    ASSERT_EQ(y, 0);
+
     ASSERT_EQ(system("python3 ../../scripts/big_integer_test_gen.py div -n 10 -m 50000 -s 0"), 0);
     std::ifstream f("/tmp/big_integer_test_div");
     ASSERT_TRUE(f.is_open());
@@ -172,7 +180,6 @@ TEST_F(BigIntegerTest, CompareTest)
     {
         int x = rand() - rand();
         int y = rand() - rand();
-        std::cerr << x << " " << y << std::endl;
         ASSERT_EQ(BigInt(x) < y, x < y);
         ASSERT_EQ(BigInt(x) > y, x > y);
         ASSERT_EQ(BigInt(x) == y, x == y);
@@ -245,9 +252,6 @@ TEST_F(BigIntegerTest, BigCmpTest)
         std::stringstream d(line);
         bool d0, d1, d2;
         ASSERT_TRUE(d >> d0 >> d1 >> d2);
-
-        x.debug();
-        y.debug();
 
         ASSERT_EQ(x > y, c0);
         ASSERT_EQ(x == y, c1);

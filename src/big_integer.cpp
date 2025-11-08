@@ -569,10 +569,10 @@ unsign_div_and_mod(const std::vector<BIT> &a1, const std::vector<BIT> &a2)
             assert(unsign_compare(rem, a2) <= 0);
         }
 
+    div_end:
         if (i == 0)
             continue;
 
-    div_end:
         nr = rem.size();
         rem.push_back(0);
         for (int j = nr; j >= 1; --j)

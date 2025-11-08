@@ -7,6 +7,7 @@ function(add_unit_test TARGET_NAME)
     target_link_libraries(${TARGET_NAME}
         PRIVATE
         bigint_lib
+        rsa_lib
         GTest::gtest_main
         # OpenMP::OpenMP_CXX
     )
@@ -19,4 +20,8 @@ add_unit_test(BigIntegerTest
 
 add_unit_test(RandomTest
     random_test.cpp
+)
+
+add_unit_test(RSACoreTest
+    rsa_core_test.cpp
 )

@@ -60,6 +60,9 @@ namespace BNRandom
             if (keep)
                 res.back() |= static_cast<BIT>(1) << (BITL - 1);
         }
+        if (keep == false)
+            while (!res.empty() && res.back() == 0)
+                res.pop_back();
         return BigInt(std::move(res), 0);
     }
 
