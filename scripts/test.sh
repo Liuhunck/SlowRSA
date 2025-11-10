@@ -8,7 +8,7 @@ DEC=./build/bin/dec.txt
 
 
 gen() {
-    time $RSA gen --bits 1024 --pubkey $PUB --key $KEY
+    time $RSA gen --bits $1 --pubkey $PUB --key $KEY
 }
 
 enc() {

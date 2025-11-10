@@ -222,7 +222,7 @@ TEST_F(BigIntegerTest, ModPowTest)
         BigInt m = BigInt(line);
         ASSERT_EQ(m.toString(), line);
 
-        ASSERT_EQ(x.modPow(y, z), m);
+        ASSERT_EQ((x % z).modPow(y, z), m);
     }
     f.close();
 }

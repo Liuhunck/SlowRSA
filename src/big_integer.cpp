@@ -761,7 +761,7 @@ BigInt BigInt::operator<<(const int bits) const
 }
 
 BigInt
-BigInt::modPow(const BigInt &exp, const BigInt &mod) const
+BigInt::modPowBasic(const BigInt &exp, const BigInt &mod) const
 {
     BigInt x = *this;
     BigInt res = BigInt(1);

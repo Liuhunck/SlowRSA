@@ -2,6 +2,7 @@ include_directories(${CMAKE_SOURCE_DIR}/include)
 
 add_library(bigint_lib
     big_integer.cpp
+    big_integer_ext.cpp
 )
 
 add_library(rsa_lib

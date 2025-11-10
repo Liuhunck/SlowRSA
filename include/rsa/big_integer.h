@@ -6,6 +6,7 @@
 #include "prime.h"
 
 #define BIT_USE_64
+#define BIT_USE_BARRETT
 
 #if defined(BIT_USE_64)
 #define BIT unsigned long long
@@ -86,7 +87,16 @@ public:
     BigInt operator<<(const int bits) const;
 
     // 模幂运算 (核心)
-    BigInt modPow(const BigInt &exp, const BigInt &mod) const;
+    BigInt modPow(const BigInt &exp, const BigInt &mod) const
+    {
+#if defined(BIT_USE_BARRETT)
+        return modPowBarrett(exp, mod);
+#else
+        return modPowBasic(exp, mod);
+#endif
+    }
+    BigInt modPowBasic(const BigInt &exp, const BigInt &mod) const;
+    BigInt modPowBarrett(const BigInt &exp, const BigInt &mod) const;
 
     // 转换函数
     std::string toString() const;

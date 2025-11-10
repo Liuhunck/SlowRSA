@@ -7,6 +7,7 @@
 
 int main(const int argc, const char *argv[])
 {
+    BNRandom::initRandom();
     ArgsParser parser;
 
     try
