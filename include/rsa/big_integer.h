@@ -26,7 +26,7 @@
 
 class BigInt
 {
-private:
+protected:
     std::vector<BIT> digits;
     bool sign = false;
 

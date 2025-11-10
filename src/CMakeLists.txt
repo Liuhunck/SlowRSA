@@ -13,6 +13,7 @@ add_library(rsa_lib
 add_executable(rsa
     main.cpp
     utils.cpp
+    argsparser.cpp
 )
 
 target_link_libraries(rsa_lib
