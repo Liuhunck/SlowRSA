@@ -6,7 +6,7 @@
 
 void BNUtils::init()
 {
-    assert(sz * BITL >= (length + lenlength) * 8);
+    assert(sz * BITL >= (length + lenlength + 1) * 8);
     digits.resize(sz);
 }
 
@@ -18,10 +18,13 @@ void BNUtils::clear()
 
 void BNUtils::encode(const char *src, int len)
 {
+    assert(len >= 1);
     assert(len <= length);
     init();
     char *dd = (char *)digits.data();
     memcpy(dd, src, len);
+    memset(dd + len, 0, length - len);
+    --len;
     for (int j = 0; j <= lenlength; ++j, len >>= 8)
         *(dd + length + j) = len & 0xFF;
     clear();
@@ -31,14 +34,12 @@ std::string
 BNUtils::decode()
 {
     init();
-    // if (digits.size() * BITL < (length + lenlength) * 8UL)
-    //     throw std::runtime_error("Can not decode...");
     char *dd = (char *)digits.data();
     int len = 0;
     for (int j = lenlength; j >= 0; --j)
-        len = len << 8 | *(dd + length + j);
+        len = (len << 8) | (unsigned char)*(dd + length + j);
     assert(len <= length);
-    return std::string(dd, len);
+    return std::string(dd, len + 1);
 }
 
 static inline int
